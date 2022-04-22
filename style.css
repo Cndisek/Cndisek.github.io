@@ -1,0 +1,77 @@
+
+
+html {
+	background-color: rgb(160, 230, 220);
+}
+
+#gmCanvas {
+	border: 1px solid black;
+	background-color: black;
+	position: absolute;
+	width: 800px;
+	height: 480px;
+	padding: 0;
+	margin: 0;
+}
+
+.container {
+	display: block;
+}
+
+.menu {
+	background-color: white;
+	width: 30rem;
+	height: 30rem;
+	position: absolute;
+	left: 820px;
+	display: inline-block;
+	visibility: hidden;
+	border: 2px solid black;
+}
+
+.play {
+	margin: auto auto;
+	position: absolute;
+	top: 50%;
+	left: 25rem;
+}
+
+.center-text {
+	text-align: center;
+}
+
+.buy-tower {
+	visibility: hidden;
+}
+
+.info-display span {
+	border: 1px solid black;
+	font-weight: bold;
+	font-size: 1.5rem;
+	background-color: rgb(230, 255, 100);
+}
+
+.option {
+	display: block;
+	text-align: center;
+	width: 75%;
+	margin: 0.5rem auto;
+	background-color: rgb(200, 100, 100)
+}
+
+.green {
+	color: green;
+}
+
+.red {
+	color: rgb(255, 0, 0);
+}
+
+.start-button {
+	width: 80px;
+	height: 2rem;
+	background-color: green;
+	display: inline;
+	position: absolute;
+	left: 0%;
+}
