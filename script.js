@@ -97,7 +97,7 @@ class GM {
 		
 		this.waveNumber = 0;
 		this.waveActive = false;
-		this.waveEnemies = [];
+		this.enemySpawnQueue = [];
 
 		this.grid = new Grid(canvas.height, canvas.width);
 		this.activeEnemies = [];
@@ -114,6 +114,7 @@ class GM {
 
 	update() {
 
+		// Iterate through projectiles and update them
 		for (let k = 0; k < this.projectiles.length; k++) {
 			let proj = this.projectiles[k];
 			proj.update();
@@ -123,10 +124,11 @@ class GM {
 
 			if (proj.position.distance(proj.target.position) < ((2 * proj._radius) + proj.target._radius)) {
 				this.projectiles.splice(k, 1);
-				proj.target.damage(20);
+				proj.target.damage(proj.damage);
 			}
 		}
 
+		// Iterate through enemies and update them
 		for (let j = 0; j < this.activeEnemies.length; j++) {
 			this.activeEnemies[j].update();
 			if (this.activeEnemies[j].health <= 0) {
@@ -135,11 +137,13 @@ class GM {
 			}
 		}
 
+		// Iterate through towers and update them
 		for (let i = 0; i < this.towers.length; i++) {
 			this.towers[i].update(this.activeEnemies, this.createProjectile.bind(this));
 		}
 
-		if (this.waveEnemies.length == 0 && this.activeEnemies.length == 0) {
+		// Check if current wave is still active
+		if (this.enemySpawnQueue.length == 0 && this.activeEnemies.length == 0) {
 			this.waveActive = false;
 		}
 
@@ -147,22 +151,29 @@ class GM {
 	}
 
 	render(ctx) {
+
+		// Reset canvas
 		ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+		// Draw grid/cells
 		this.grid.draw(ctx);
 
+		// If there is a selected cell => change its color to red
 		if (this.selected != null) {
 			this.grid.cells[this.selected[0]][this.selected[1]].focus(ctx);
 		}
 
+		// Iterate through each of the towers and render them
 		for (let i = 0; i < this.towers.length; i++) {
 			this.towers[i].draw(ctx);
 		}
 
+		// Iterate through each of the enemies and render them
 		for (let j = 0; j < this.activeEnemies.length; j++) {
 			this.activeEnemies[j].draw(ctx);
 		}
 
+		// Iterate through each of the projectiles and render them
 		for (let k = 0; k < this.projectiles.length; k++) {
 			this.projectiles[k].draw(ctx);
 		}
@@ -170,8 +181,8 @@ class GM {
 	}
 
 	_spawnEnemy(obj) {
-		if (obj.waveEnemies.length > 0) {
-			obj.activeEnemies.push(obj.waveEnemies.shift());
+		if (obj.enemySpawnQueue.length > 0) {
+			obj.activeEnemies.push(obj.enemySpawnQueue.shift());
 		} else {
 			return;
 		}
@@ -181,9 +192,9 @@ class GM {
 	startWave() {
 		if (!this.waveActive) {
 			this.waveNumber += 1;
-			for (let i = 0; i < 5; i++) {
+			for (let i = 0; i < 1; i++) {
 				let newE = new Enemy(this.waveNumber)
-				this.waveEnemies.push(newE);
+				this.enemySpawnQueue.push(newE);
 			}
 
 			waveText.innerHTML = "<em>Wave: " + this.waveNumber.toFixed(0) + "</em>";
@@ -193,8 +204,8 @@ class GM {
 		}
 	}
 
-	createProjectile(position, velocity, target) {
-		let newProj = new Projectile(position, velocity, target);
+	createProjectile(position, velocity, target, damage) {
+		let newProj = new Projectile(position, velocity, target, damage);
 		this.projectiles.push(newProj);
 	}
 
@@ -213,7 +224,7 @@ class GM {
 				newTower = new Type4Tower(position, WHITE);
 				break;
 			case 5:
-				newTower = new Type2Tower(position, WHITE);
+				newTower = new Type5Tower(position, WHITE);
 				break;
 			default:
 				newTower = new Type1Tower(position, WHITE);
@@ -236,6 +247,23 @@ class GM {
 				entryField.innerHTML = "";
 				this.spendMoney(cost);
 			}
+		}
+	}
+
+	selectTower() {
+		if (this.selected != null) {
+			let coords = this.selected;
+			let cell = this.grid.cells[coords[0]][coords[1]];
+
+			let tStats = cell.tower.stats;
+
+			let content = ` <div class="center-text">
+								<span>Damage: ${tStats.damage}</span>
+						    	<span>Shot Speed: ${Math.floor(1000 / tStats.shotDelay)}</span>
+						    	<span>Range: ${10 * tStats.range / CELLSPACING}</span>
+						    </div>
+						  `;
+			entryField.innerHTML = content;
 		}
 	}
 }
@@ -512,21 +540,31 @@ class Enemy {
 */
 
 
+
+class TowerStats {
+	constructor(shotDelay, range, damage) {
+		this.shotDelay = shotDelay;
+		this.range = range;
+		this.damage = damage;
+	}
+}
+
+
 /* -----------------------------------------------------------------------------------------------------------------
 Tower Class
 */
 
-class Tower {
-	constructor(position, color, size, shotDelay, range) {
+class TowerBase {
+	constructor(position, color, size, shotDelay, range, damage) {
 		this.position = position;
 		this.color = color;
 		this.rotation = 0;
 		this.size = size;
 		this._radius = ((CELLSPACING - 1) / 2) - Math.floor((1/this.size) * CELLSPACING);
-		this.range = CELLSPACING * range;
 
-		this.framesTillNextShot = shotDelay; //60;
-		this.counter = this.framesTillNextShot;
+		this.stats = new TowerStats(shotDelay, CELLSPACING * range, damage);
+
+		this.counter = shotDelay;
 	}
 
 	draw(ctx) {
@@ -565,9 +603,9 @@ class Tower {
 		this.counter++;
 		let target = this._getTarget(enemyList);
 		if (target != null) {
-			if (this.position.distance(target.position) <= this.range) {
+			if (this.position.distance(target.position) <= this.stats.range) {
 				this.lookAt(target.position);
-				if (this.counter >= this.framesTillNextShot) {
+				if (this.counter >= this.stats.shotDelay) {
 					let x = target.position.x - this.position.x + (target.velocity.x * 2);
 					let y = target.position.y - this.position.y + (target.velocity.y * 2);
 					let direction = new Vector2(x, y);
@@ -575,7 +613,7 @@ class Tower {
 					let position = new Vector2(this.position.x, this.position.y);
 					position.x = position.x + (direction.x * (this._radius / 3));
 					position.y = position.y + (direction.y * (this._radius / 2));
-					shootCallback(position, direction, target);
+					shootCallback(position, direction, target, this.stats.damage);
 					this.counter = 0;
 				}
 			}
@@ -595,15 +633,15 @@ class Tower {
 	}
 }
 
-class Type1Tower extends Tower {
+class Type1Tower extends TowerBase {
 	constructor(position, color, size=4) {
-		super(position, color, 4, 60, 3);
+		super(position, color, 4, 30, 3, 25);
 	}
 }
 
-class Type2Tower extends Tower {
+class Type2Tower extends TowerBase {
 	constructor(position, color, size=4) {
-		super(position, color, 4, 20, 2);
+		super(position, color, 4, 20, 2, 18);
 	}
 	draw(ctx) {
 		//ctx.beginPath();
@@ -621,9 +659,9 @@ class Type2Tower extends Tower {
 	}
 }
 
-class Type3Tower extends Tower {
+class Type3Tower extends TowerBase {
 	constructor(position, color, size=4) {
-		super(position, color, 4, 40, 5);
+		super(position, color, 4, 40, 5, 35);
 	}
 	draw(ctx) {
 		ctx.beginPath();
@@ -643,9 +681,9 @@ class Type3Tower extends Tower {
 	}
 }
 
-class Type4Tower extends Tower {
+class Type4Tower extends TowerBase {
 	constructor(position, color, size=4) {
-		super(position, color, 4, 40, 5);
+		super(position, color, 4, 40, 4, 50);
 	}
 	draw(ctx) {
 		ctx.beginPath();
@@ -667,6 +705,31 @@ class Type4Tower extends Tower {
 }
 
 
+class Type5Tower extends TowerBase {
+	constructor(position, color, size=4) {
+		super(position, color, 4, 30, 3.5, 150);
+	}
+	draw(ctx) {
+		ctx.beginPath();
+		ctx.translate(this.position.x, this.position.y);
+		ctx.fillStyle = this.color;
+		ctx.rotate(this.rotation * Math.PI / 180);
+		
+		ctx.fillRect(-((CELLSPACING - 1) / 2) + 4, 0, ((CELLSPACING - 1) / 2) - 6, 2);
+		ctx.fillRect(2, 0, ((CELLSPACING - 1) / 2) - 6, 2);
+
+		ctx.fillRect(-2, -((CELLSPACING - 1) / 6), -2, ((CELLSPACING - 1) / 3));
+		ctx.fillRect(2, -((CELLSPACING - 1) / 6), 2, ((CELLSPACING - 1) / 3));
+
+		ctx.fill();
+		ctx.closePath();
+		ctx.rotate(-this.rotation * Math.PI / 180);
+		ctx.translate(-1 * this.position.x, -1 * this.position.y);
+		return;
+	}
+}
+
+
 /* -----------------------------------------------------------------------------------------------------------------
 */
 
@@ -676,12 +739,13 @@ Projectile Class
 */
 
 class Projectile {
-	constructor(position, velocity, target) {
+	constructor(position, velocity, target, damage=20) {
 		this.position = position;
 		this.velocity = velocity;
 		this.target = target;
 		this.speed = 16;
 		this._radius = ((CELLSPACING - 1) / 2) - Math.floor((1/3) * CELLSPACING);
+		this.damage = damage;
 	}
 
 	update() {
@@ -748,10 +812,12 @@ canvas.onclick = function (event) {
 					// If current cell.selected is true (selecting a previously unselected cell)
 					if (curCell.selected) {
 						GameManager.selected = [i,j];
-						if (!curCell.occupied) {
+						if (!curCell.occupied) { // Selecting an empty cell
 							entryField.innerHTML = buyTowerMenu;
 							setButtons();
-						}
+						} else { // Selecting a tower
+							GameManager.selectTower();
+						} 
 					
 					// Deselecting a previously selected cell
 					} else {
