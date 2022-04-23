@@ -192,7 +192,7 @@ class GM {
 	startWave() {
 		if (!this.waveActive) {
 			this.waveNumber += 1;
-			for (let i = 0; i < 1; i++) {
+			for (let i = 0; i < 5; i++) {
 				let newE = new Enemy(this.waveNumber)
 				this.enemySpawnQueue.push(newE);
 			}
