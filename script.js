@@ -348,7 +348,7 @@ class Cell {
 		//ctx.fillStyle = "rgba(0, 0, 255, 50)";
 		if (this.occupied) {
 			ctx.beginPath();
-			ctx.arc(this.centerx, this.centery, this.tower.range, 0, 2 * Math.PI);
+			ctx.arc(this.centerx, this.centery, this.tower.stats.range, 0, 2 * Math.PI);
 			ctx.stroke();
 			ctx.closePath();
 		}
