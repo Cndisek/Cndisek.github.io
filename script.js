@@ -94,6 +94,8 @@ class GM {
 		this.selected = null;
 		this.money = 1000;
 		this.lives = 100;
+
+		this.playing = false;
 		
 		this.waveNumber = 0;
 		this.waveActive = false;
@@ -258,12 +260,66 @@ class GM {
 			let tStats = cell.tower.stats;
 
 			let content = ` <div class="center-text">
-								<span>Damage: ${tStats.damage}</span>
+								<span>Chuka Naka: ${tStats.damage}</span>
 						    	<span>Shot Speed: ${Math.floor(1000 / tStats.shotDelay)}</span>
 						    	<span>Range: ${10 * tStats.range / CELLSPACING}</span>
 						    </div>
 						  `;
 			entryField.innerHTML = content;
+		}
+	}
+
+	onClick(event) {
+		//console.log(event.clientX, event.clientY, canvas.width, canvas.height);
+		let x = (canvas.width / canvas.clientWidth) * (event.clientX - 9);
+		let y = (canvas.height / canvas.clientHeight) * (event.clientY - 80);
+
+		if (!this.playing) {
+			return;
+		}
+
+		let cells = this.grid.cells;
+
+		// Iterate through the cells
+		for (let i = 0; i < cells.length; i++) {
+			for (let j = 0; j < cells[0].length; j++) {
+				let curCell = cells[i][j];
+
+				// If current cell was clicked on
+				if (curCell.left <= x & curCell.right >= x & curCell.top <= y & curCell.bottom >= y) {
+					
+					// Cannot select a path cell
+					if (!curCell.isPath) {
+							curCell.selected = !curCell.selected; // Toggle selected value for current cell
+						
+						// If current cell.selected is true (selecting a previously unselected cell)
+						if (curCell.selected) {
+							this.selected = [i,j];
+							if (!curCell.occupied) { // Selecting an empty cell
+								entryField.innerHTML = buyTowerMenu;
+								setButtons();
+							} else { // Selecting a tower
+								this.selectTower();
+							} 
+						
+						// Deselecting a previously selected cell
+						} else {
+							this.selected = null;
+							entryField.innerHTML = "";
+						}
+					
+					// Clicked on path cell
+					} else {
+						this.selected = null;
+						entryField.innerHTML = "";
+					}
+					
+				// If current cell was not clicked on: set selected to false
+				} else {
+					// This ensures that all cells that were not clicked on cannot be selected
+					curCell.selected = false;
+				}
+			}
 		}
 	}
 }
@@ -780,65 +836,16 @@ Event Handling
 
 
 playbutton.addEventListener("click", function () {
-	alert("Hello world");
 	playbutton.style.display = "none";
 	document.getElementById("menu").style.visibility = "visible";
+	GameManager.playing = true;
 
 	setTimeout(gameloop, 1000);
 });
 
 canvas.onclick = function (event) {
-	//console.log((event.clientX - 8) / 3, (event.clientY - 80) / 3);
-	console.log(event.clientX, event.clientY, canvas.width, canvas.height);
-	//let x = (300 / 800) * (event.clientX - 8);
-	//let y = (150 / 480) * (event.clientY - 80);
-	let x = (canvas.width / canvas.clientWidth) * (event.clientX - 9);
-	let y = (canvas.height / canvas.clientHeight) * (event.clientY - 80);
-
-	let cells = GameManager.grid.cells;
-
-	// Iterate through the cells
-	for (let i = 0; i < cells.length; i++) {
-		for (let j = 0; j < cells[0].length; j++) {
-			let curCell = cells[i][j];
-
-			// If current cell was clicked on
-			if (curCell.left <= x & curCell.right >= x & curCell.top <= y & curCell.bottom >= y) {
-				
-				// Cannot select a path cell
-				if (!curCell.isPath) {
-						curCell.selected = !curCell.selected; // Toggle selected value for current cell
-					
-					// If current cell.selected is true (selecting a previously unselected cell)
-					if (curCell.selected) {
-						GameManager.selected = [i,j];
-						if (!curCell.occupied) { // Selecting an empty cell
-							entryField.innerHTML = buyTowerMenu;
-							setButtons();
-						} else { // Selecting a tower
-							GameManager.selectTower();
-						} 
-					
-					// Deselecting a previously selected cell
-					} else {
-						GameManager.selected = null;
-						entryField.innerHTML = "";
-					}
-				
-				// Clicked on path cell
-				} else {
-					GameManager.selected = null;
-					entryField.innerHTML = "";
-				}
-				
-			// If current cell was not clicked on: set selected to false
-			} else {
-				// This ensures that all cells that were not clicked on cannot be selected
-				curCell.selected = false;
-			}
-		}
-	}
-}
+	GameManager.onClick(event);
+};
 /*
 Event Handling
 ===================================================================================================================================================
