@@ -65,11 +65,6 @@ function setButtons() {
 	option5Button.onclick = function () {
 		GameManager.buyTower(5, 500);
 	}
-
-	startButton.onclick = function () {
-		console.log("startbutton click");
-		GameManager.startWave();
-	}
 }
 /*
 Constants
@@ -834,6 +829,10 @@ Class Definitions
 Event Handling
 */
 
+startButton.onclick = function () {
+	console.log("startbutton click");
+	GameManager.startWave();
+}
 
 playbutton.addEventListener("click", function () {
 	playbutton.style.display = "none";
