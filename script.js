@@ -109,6 +109,14 @@ class GM {
 		moneyText.innerHTML = "Shuka Juka: $" + this.money.toFixed(0);
 	}
 
+	loseHealth() {
+		this.lives--;
+		if (this.lives < 0) {
+			this.lives = 0;
+		}
+		livesText.innerHTML = "Oshiga: " + this.lives.toFixed(0);
+	}
+
 	update() {
 
 		// Iterate through projectiles and update them
@@ -127,7 +135,7 @@ class GM {
 
 		// Iterate through enemies and update them
 		for (let j = 0; j < this.activeEnemies.length; j++) {
-			this.activeEnemies[j].update();
+			this.activeEnemies[j].update(this.loseHealth.bind(this));
 			if (this.activeEnemies[j].health <= 0) {
 				this.spendMoney(-this.activeEnemies[j].value);
 				this.activeEnemies.splice(j, 1);
@@ -255,7 +263,7 @@ class GM {
 			let tStats = cell.tower.stats;
 
 			let content = ` <div class="center-text">
-								<span>Chuka Naka: ${tStats.damage}</span>
+								<span>Damage: ${tStats.damage}</span>
 						    	<span>Shot Speed: ${Math.floor(1000 / tStats.shotDelay)}</span>
 						    	<span>Range: ${10 * tStats.range / CELLSPACING}</span>
 						    </div>
@@ -548,7 +556,7 @@ class Enemy {
 		return;
 	}
 
-	update() {
+	update(loseHealthCallback) {
 		let compareX = this.velocity.x > 0 ? function (x1, x2) { return x1 >= x2; } : function (x1, x2) { return x1 <= x2; };
 		let compareY = this.velocity.y > 0 ? function (y1, y2) { return y1 >= y2; } : function (y1, y2) { return y1 <= y2; };
 		if  (compareX(this.position.x, this.targetPosition.x) & compareY(this.position.y, this.targetPosition.y)) {
@@ -559,6 +567,7 @@ class Enemy {
 				this.position.x = startPos.x;
 				this.position.y = startPos.y;
 				this.setTarget();
+				loseHealthCallback();
 			} else {
 				this.position.x = this.targetPosition.x;
 				this.position.y = this.targetPosition.y;
@@ -828,7 +837,6 @@ Class Definitions
 ===================================================================================================================================================
 Event Handling
 */
-
 startButton.onclick = function () {
 	console.log("startbutton click");
 	GameManager.startWave();
@@ -845,6 +853,7 @@ playbutton.addEventListener("click", function () {
 canvas.onclick = function (event) {
 	GameManager.onClick(event);
 };
+
 /*
 Event Handling
 ===================================================================================================================================================
