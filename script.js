@@ -255,6 +255,23 @@ class GM {
 		}
 	}
 
+	upgradeTower(tower, type) {
+		console.log("upgrade tower: " + type + " " + tower);
+		let cost = tower.getCost(type);
+		if (this.money >= cost) {
+			let success = tower.upgrade(type);
+			if (success) {
+				this.spendMoney(cost);
+			}
+			document.getElementById("damageField").innerHTML = "Damage: " + tower.stats.damage;
+			document.getElementById("attackSpeedField").innerHTML = "Attack Speed: " + Math.floor(1000 / tower.stats.shotDelay);
+			document.getElementById("rangeField").innerHTML = "Range: " + (10 * (tower.stats.range / CELLSPACING)).toFixed(0);
+			console.log(tower.stats.shotDelay);
+			console.log(tower.stats.damage);
+			console.log(tower.stats.range);
+		}
+	}
+
 	selectTower() {
 		if (this.selected != null) {
 			let coords = this.selected;
@@ -263,12 +280,24 @@ class GM {
 			let tStats = cell.tower.stats;
 
 			let content = ` <div class="center-text">
-								<span>Damage: ${tStats.damage}</span>
-						    	<span>Shot Speed: ${Math.floor(1000 / tStats.shotDelay)}</span>
-						    	<span>Range: ${10 * tStats.range / CELLSPACING}</span>
+								<span id="damageField">Damage: ${tStats.damage}</span>
+						    	<span id="attackSpeedField">Attack Speed: ${Math.floor(1000 / tStats.shotDelay)}</span>
+						    	<span id="rangeField">Range: ${10 * tStats.range / CELLSPACING}</span>
 						    </div>
 						  `;
+
+			content += cell.tower.upgradeMenu();
 			entryField.innerHTML = content;
+
+			option1Button = document.getElementById("option1");
+			option2Button = document.getElementById("option2");
+			option3Button = document.getElementById("option3");
+			
+			option1Button.onclick = this.upgradeTower.bind(this, cell.tower, 1);
+
+			option2Button.onclick = this.upgradeTower.bind(this, cell.tower, 2);
+
+			option3Button.onclick = this.upgradeTower.bind(this, cell.tower, 3);
 		}
 	}
 
@@ -602,10 +631,49 @@ class Enemy {
 
 
 class TowerStats {
-	constructor(shotDelay, range, damage) {
+	constructor(shotDelay, range, damage, deltaSD, deltaR, deltaD) {
 		this.shotDelay = shotDelay;
 		this.range = range;
 		this.damage = damage;
+
+		this.deltaShotDelay = deltaSD;
+		this.deltaRange = deltaR;
+		this.deltaDamage = deltaD;
+
+		this.maxDamage = damage + (deltaD * 5);
+		this.minShotDelay = Math.max(2, shotDelay - (deltaSD * 5));
+		this.maxRange = range + (deltaR * 5);
+	}
+
+	upgrade(type) {
+		let retval = false;
+		switch (type) {
+			case 1:
+				console.log("Upgrade 1");
+				let newDamage = this.damage + this.deltaDamage;
+				if (newDamage <= this.maxDamage) {
+					this.damage = newDamage;
+					retval = true;
+				}
+				break;
+			case 2:
+				console.log("Upgrade 2");
+				let newshotDelay = this.shotDelay - this.deltaShotDelay;
+				if (newshotDelay >= this.minShotDelay) {
+					this.shotDelay = newshotDelay;
+					retval = true;
+				}
+				break;
+			case 3:
+				console.log("Upgrade 3");
+				let newRange = this.range + this.deltaRange;
+				if (newRange <= this.maxRange) {
+					this.range = newRange;
+					retval = true;
+				}
+				break;
+		}
+		return retval;
 	}
 }
 
@@ -615,16 +683,14 @@ Tower Class
 */
 
 class TowerBase {
-	constructor(position, color, size, shotDelay, range, damage) {
+	constructor(position, color, size) {
 		this.position = position;
 		this.color = color;
 		this.rotation = 0;
 		this.size = size;
 		this._radius = ((CELLSPACING - 1) / 2) - Math.floor((1/this.size) * CELLSPACING);
 
-		this.stats = new TowerStats(shotDelay, CELLSPACING * range, damage);
-
-		this.counter = shotDelay;
+		this.counter = 100;
 	}
 
 	draw(ctx) {
@@ -691,17 +757,50 @@ class TowerBase {
 		}
 		return;
 	}
+
+	getCost(upgradeType) {
+		let cost = 0;
+		switch (upgradeType) {
+			case 1:
+				cost = 100;
+				break;
+			case 2:
+				cost = 100;
+				break;
+			case 3:
+				cost = 50;
+				break;
+		}
+		return cost;
+	}
+
+	upgrade(type) {
+		return this.stats.upgrade(type);
+	}
+
+	upgradeMenu() {
+		let menu = '<div class="center-text">\
+			<button class="option" id="option1"><p><strong>Gwun</strong> 100 <span class="green">Shuka Juka</span></p></button>\
+			<button class="option" id="option2"><p><strong>Ghu</strong> 100 <span class="green">Shuka Juka</span></p></button>\
+			<button class="option" id="option3"><p><strong>Gwa</strong> 50 <span class="green">Shuka Juka</span></p></button>\
+		</div>';
+		return menu;
+	}
 }
 
 class Type1Tower extends TowerBase {
 	constructor(position, color, size=4) {
-		super(position, color, 4, 30, 3, 25);
+		super(position, color, 4);
+
+		this.stats = new TowerStats(30, CELLSPACING * 3, 30, 2, 3, 40);
 	}
 }
 
 class Type2Tower extends TowerBase {
 	constructor(position, color, size=4) {
-		super(position, color, 4, 20, 2, 18);
+		super(position, color, 4);
+
+		this.stats = new TowerStats(20, CELLSPACING * 2, 18, 3, 1.5, 25);
 	}
 	draw(ctx) {
 		//ctx.beginPath();
@@ -721,8 +820,24 @@ class Type2Tower extends TowerBase {
 
 class Type3Tower extends TowerBase {
 	constructor(position, color, size=4) {
-		super(position, color, 4, 40, 5, 35);
+		super(position, color, 4);
+
+		this.stats = new TowerStats(40, CELLSPACING * 5, 40, 2, 20, 60);
 	}
+
+	_getTarget(enemyList) {
+		if (enemyList.length > 0) {
+			for (let i = 0; i < enemyList.length; i++) {
+				let target = enemyList[i];
+				if (this.position.distance(target.position) <= this.stats.range) {
+					return target;
+				}
+			}
+		}
+
+		return null;
+	}
+
 	draw(ctx) {
 		ctx.beginPath();
 		ctx.translate(this.position.x, this.position.y);
@@ -743,7 +858,9 @@ class Type3Tower extends TowerBase {
 
 class Type4Tower extends TowerBase {
 	constructor(position, color, size=4) {
-		super(position, color, 4, 40, 4, 50);
+		super(position, color, 4);
+
+		this.stats = new TowerStats(45, CELLSPACING * 4, 50, 2, 2, 75);
 	}
 	draw(ctx) {
 		ctx.beginPath();
@@ -768,6 +885,8 @@ class Type4Tower extends TowerBase {
 class Type5Tower extends TowerBase {
 	constructor(position, color, size=4) {
 		super(position, color, 4, 30, 3.5, 150);
+
+		this.stats = new TowerStats(30, CELLSPACING * 3.5, 150, 3, 2, 100);
 	}
 	draw(ctx) {
 		ctx.beginPath();
@@ -878,5 +997,5 @@ function gameloop () {
 		GameManager.render(ctx);
 
 		requestAnimationFrame(gameloop);
-	}, 1);
+	}, 12);
 }
