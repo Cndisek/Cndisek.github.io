@@ -29,7 +29,7 @@ const LIGHTORANGE = "rgb(255, 180, 0)";
 const dpi = window.devicePixelRatio;
 console.log(dpi);
 const ctx = canvas.getContext("2d");
-ctx.scale(dpi, dpi);
+//ctx.scale(dpi, dpi);
 
 
 buyTowerMenu = '<div class="center-text"> \
